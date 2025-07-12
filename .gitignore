@@ -1,0 +1,69 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# node_modules klasörü (bağımlılıklar)
+node_modules/
+frontend/
+panagoa_tatoeba_raw_tur_kbd_1.parquet
+panagoa_tatoeba_raw_tur_kbd_2.parquet
+model/
+# Vite build çıktısı
+dist/
+
+# Sistem dosyaları
+.DS_Store
+Thumbs.db
+
+# log dosyaları
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# environment dosyaları
+.env
+.env.*.local
+.env.local
+
+# Vite cache (opsiyonel ama önerilir)
+.vite/
+
+# IDE/editor dosyaları
+.vscode/
+.idea/
+
+# TypeScript
+*.tsbuildinfo
+
+# Mac OS klasör ayarları
+*.swp
+
+# coverage (test kapsamı)
+coverage/
+
+# test çıkışları
+*.log
+
+# local VS Code debug ayarları
+*.code-workspace
