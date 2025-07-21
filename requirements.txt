@@ -1,0 +1,7 @@
+Flask==3.0.3
+transformers==4.38.0
+flask_jwt_extended
+Flask-Cors
+bcrypt
+flask_sqlalchemy
+torch
