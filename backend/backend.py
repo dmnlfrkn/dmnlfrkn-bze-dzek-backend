@@ -20,8 +20,8 @@ with app.app_context():
     db.create_all()
 
 # Model ve tokenizer
-#model_name = "../model" #local
-model_name = "panagoa/nllb-200-1.3b-kbd-v0.2" #huggingface
+model_name = "../model" #local
+#model_name = "panagoa/nllb-200-1.3b-kbd-v0.2" #huggingface
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 
@@ -29,8 +29,28 @@ model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 LANG_CODES = {
     "Türkçe": "tur_Latn",
     "Çerkesce (Doğu)": "kbd_Cyrl",
+    "İngilizce": "eng_Latn",
+
 
 }
+def perform_translation(text, source_lang, target_lang):
+    src_code = LANG_CODES.get(source_lang)
+    tgt_code = LANG_CODES.get(target_lang)
+
+    if not src_code or not tgt_code:
+        return {"error": "Geçersiz dil seçimi."}, 400
+
+    try:
+        inputs = tokenizer(f"{src_code}: {text}", return_tensors="pt")
+        translated_tokens = model.generate(
+            **inputs,
+            forced_bos_token_id=tokenizer.lang_code_to_id[tgt_code],
+            max_length=50
+        )
+        translation = tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0]
+        return {"çeviri": translation, "kaynak": "model"}, 200
+    except Exception as e:
+        return {"error": str(e)}, 500
 
 @app.route('/register',methods =['POST'])
 def register():
@@ -65,47 +85,37 @@ def login():
 
 @app.route("/translateByLogin", methods=["POST"])
 @jwt_required()
-def translateByLogin():
+def translate_by_login():
     user_id = get_jwt_identity()
     data = request.get_json()
     text = data.get("text", "").strip()
-    source_lang = data.get("source_lang", "Kabardeyce")
-    target_lang = data.get("target_lang", "Türkçe")
+    source_lang = data.get("source_lang")
+    target_lang = data.get("target_lang")
 
-    if not text:
-        return jsonify({"error": "Metin boş olamaz."}), 400
+    if not text or not source_lang or not target_lang:
+        return jsonify({"error": "Metin ve diller boş olamaz."}), 400
 
-    src_code = LANG_CODES.get(source_lang)
-    tgt_code = LANG_CODES.get(target_lang)
+    if source_lang == target_lang:
+        return jsonify({"error": "Kaynak ve hedef diller farklı olmalıdır."}), 400
 
-    if not src_code or not tgt_code:
-        return jsonify({"error": "Dil kodu tanınmadı."}), 400
-
-    # Geçmişten çeviri kontrolü
-    existing_history = History.query.filter_by(
+    # Daha önce çevrilmiş mi kontrol et
+    existing = History.query.filter_by(
         input_text=text,
         source_lang=source_lang,
         target_lang=target_lang,
         user_id=user_id
     ).first()
 
-    if existing_history:
-        return jsonify({"çeviri": existing_history.target_text, "kaynak": "veritabanı"})
+    if existing:
+        return jsonify({"çeviri": existing.target_text, "kaynak": "veritabanı"}), 200
 
-    try:
-        # Model ile çevir
-        inputs = tokenizer(f"{src_code}: {text}", return_tensors="pt")
-        translated_tokens = model.generate(
-            **inputs,
-            forced_bos_token_id=tokenizer.lang_code_to_id[tgt_code],
-            max_length=50
-        )
-        translation = tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0]
+    result, status = perform_translation(text, source_lang, target_lang)
 
-        # Veritabanına kaydet
+    if "çeviri" in result:
+        # Çeviriyi kaydet
         new_history = History(
             input_text=text,
-            target_text=translation,
+            target_text=result["çeviri"],
             source_lang=source_lang,
             target_lang=target_lang,
             user_id=user_id
@@ -113,41 +123,25 @@ def translateByLogin():
         db.session.add(new_history)
         db.session.commit()
 
-        return jsonify({"çeviri": translation, "kaynak": "model"}), 200
+    return jsonify(result), status
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 @app.route("/translate", methods=["POST"])
 def translate():
     data = request.get_json()
     text = data.get("text", "").strip()
-    source_lang = data.get("source_lang", "Kabardeyce")
-    target_lang = data.get("target_lang", "Türkçe")
+    source_lang = data.get("source_lang")
+    target_lang = data.get("target_lang")
 
-    if not text:
-        return jsonify({"error": "Metin boş olamaz."}), 400
+    if not text or not source_lang or not target_lang:
+        return jsonify({"error": "Metin ve diller boş olamaz."}), 400
 
-    src_code = LANG_CODES.get(source_lang)
-    tgt_code = LANG_CODES.get(target_lang)
+    if source_lang == target_lang:
+        return jsonify({"error": "Kaynak ve hedef diller farklı olmalıdır."}), 400
 
-    if not src_code or not tgt_code:
-        return jsonify({"error": "Dil kodu tanınmadı."}), 400
+    result, status = perform_translation(text, source_lang, target_lang)
+    return jsonify(result), status
 
-    try:
-        # Model ile çeviri
-        inputs = tokenizer(f"{src_code}: {text}", return_tensors="pt")
-        translated_tokens = model.generate(
-            **inputs,
-            forced_bos_token_id=tokenizer.lang_code_to_id[tgt_code],
-            max_length=50
-        )
-        translation = tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0]
-
-        return jsonify({"çeviri": translation, "kaynak": "model"}), 200
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 
 
