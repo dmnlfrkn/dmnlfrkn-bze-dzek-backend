@@ -20,8 +20,8 @@ with app.app_context():
     db.create_all()
 
 # Model ve tokenizer
-model_name = "../model" #local
-#model_name = "panagoa/nllb-200-1.3b-kbd-v0.2" #huggingface
+#model_name = "../model" #local
+model_name = "panagoa/nllb-200-1.3b-kbd-v0.2" #huggingface
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 
